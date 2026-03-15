@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RideCompare · Bogotá</title>
+  <title>RideCompare · Colombia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -584,6 +584,48 @@
       line-height: 1.5;
     }
 
+    /* ── City selector ──────────────────────────────────────── */
+    .city-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .city-row label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      white-space: nowrap;
+    }
+
+    #select-city {
+      flex: 1;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-family: inherit;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      outline: none;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s, background .15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+      padding-right: 2rem;
+    }
+
+    #select-city:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(255,90,31,.12);
+      background-color: #fff;
+    }
+
     /* ── Footer ─────────────────────────────────────────────── */
     footer {
       text-align: center;
@@ -602,7 +644,7 @@
     <div class="hero-inner">
       <div class="hero-eyebrow">
         <span class="dot"></span>
-        Bogotá · 3 apps en tiempo real
+        Colombia · 3 apps en tiempo real
       </div>
       <h1>Compara tu <em>próximo viaje</em></h1>
       <p>Precios en tiempo real de Uber, Cabify y Didi en una sola búsqueda.</p>
@@ -613,6 +655,25 @@
 
     <!-- Search card -->
     <div class="search-card">
+
+      <!-- City selector -->
+      <div class="city-row">
+        <label for="select-city">Ciudad</label>
+        <select id="select-city">
+          <option value="">Toda Colombia</option>
+          <option value="bogota">Bogotá</option>
+          <option value="medellin">Medellín</option>
+          <option value="cali">Cali</option>
+          <option value="barranquilla">Barranquilla</option>
+          <option value="cartagena">Cartagena</option>
+          <option value="bucaramanga">Bucaramanga</option>
+          <option value="pereira">Pereira</option>
+          <option value="manizales">Manizales</option>
+          <option value="cucuta">Cúcuta</option>
+          <option value="santamarta">Santa Marta</option>
+        </select>
+      </div>
+
       <p class="search-label">¿A dónde vas?</p>
 
       <!-- Pickup -->
@@ -702,6 +763,7 @@
     const inputDestination = document.getElementById('input-destination');
     const dropdownPickup   = document.getElementById('dropdown-pickup');
     const dropdownDest     = document.getElementById('dropdown-destination');
+    const selectCity       = document.getElementById('select-city');
     const btnCompare       = document.getElementById('btn-compare');
     const btnHint          = document.getElementById('btn-hint');
     const loadingEl        = document.getElementById('loading');
@@ -757,9 +819,26 @@
         : 'Selecciona las direcciones del desplegable';
     }
 
+    // ─── City change: clear address fields ────────────────────
+    selectCity.addEventListener('change', () => {
+      state.pickup = null;
+      state.destination = null;
+      inputPickup.value = '';
+      inputDestination.value = '';
+      inputPickup.classList.remove('has-coords');
+      inputDestination.classList.remove('has-coords');
+      closeDropdown(dropdownPickup);
+      closeDropdown(dropdownDest);
+      showResults(false);
+      hideError();
+      updateButtonState();
+    });
+
     // ─── Autocomplete ─────────────────────────────────────────
     async function fetchSuggestions(query) {
-      const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+      const city = selectCity.value;
+      const url = `/api/geocode?q=${encodeURIComponent(query)}${city ? `&city=${encodeURIComponent(city)}` : ''}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     }

@@ -20,13 +20,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Geocoding endpoint
 app.get('/api/geocode', async (req, res) => {
   const query = req.query.q;
+  const city  = req.query.city || '';
 
   if (!query || query.trim().length === 0) {
     return res.status(400).json({ error: 'El parámetro q es requerido.' });
   }
 
   try {
-    const results = await geocode(query);
+    const results = await geocode(query, city);
     res.json(results);
   } catch (err) {
     console.error('[geocode] Error:', err.message);
@@ -44,5 +45,5 @@ app.get('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`RideCompare Bogotá corriendo en http://localhost:${PORT}`);
+  console.log(`RideCompare Colombia corriendo en http://localhost:${PORT}`);
 });

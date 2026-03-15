@@ -1,6 +1,6 @@
 /**
- * Fare simulator for Bogotá ride-hailing services.
- * Uses real fare structures (COP) and simulates surge pricing.
+ * Fare simulator for Colombian ride-hailing services.
+ * Uses realistic fare structures (COP) and simulates surge pricing.
  */
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -18,7 +18,7 @@ function randomBetween(min, max) {
   return min + Math.random() * (max - min);
 }
 
-// Realistic fare structures for Bogotá (COP, 2025)
+// Realistic fare structures for Colombian cities (COP, 2025)
 const FARES = {
   uber: [
     { name: 'UberX',        base: 4500,  perKm: 1500, perMin: 180 },
@@ -45,10 +45,10 @@ const FARES = {
  */
 function simulate(serviceSlug, pickup, destination) {
   const straightKm = haversineKm(pickup.lat, pickup.lng, destination.lat, destination.lng);
-  // Road distance in Bogotá is ~1.25–1.45x the straight-line distance
+  // Road distance in Colombian cities is ~1.25–1.45x the straight-line distance
   const roadKm = straightKm * randomBetween(1.25, 1.45);
-  // Average Bogotá speed: 20–28 km/h (traffic)
-  const avgSpeedKmh = randomBetween(20, 28);
+  // Average urban speed in Colombian cities: 20–30 km/h (traffic)
+  const avgSpeedKmh = randomBetween(20, 30);
   const durationMin = (roadKm / avgSpeedKmh) * 60;
 
   // Surge: 30% chance, multiplier 1.1–1.9
