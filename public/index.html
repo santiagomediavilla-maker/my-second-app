@@ -764,12 +764,21 @@
 
     .cat-row.best .cat-price { color: var(--green-dark); }
 
+    .cat-times {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.05rem;
+    }
+
     .cat-eta {
-      font-size: 0.7rem;
-      color: var(--gray-400);
+      font-size: 0.68rem;
       font-weight: 500;
       white-space: nowrap;
     }
+
+    .cat-eta-trip   { color: #2563eb; }   /* azul — duración del trayecto */
+    .cat-eta-driver { color: var(--gray-400); } /* gris — llegada del conductor */
 
     /* ── Unavailable card body ──────────────────────────────── */
     .unavail-body {
@@ -1424,6 +1433,8 @@
 
         const row = document.createElement('div');
         row.className = `cat-row${isBest ? ' best' : ''}`;
+        const tripMin  = svc.duration_min  != null ? `<span class="cat-eta cat-eta-trip">🕐 Viaje: ~${svc.duration_min} min</span>`    : '';
+        const driverMin = cat.eta_minutes  != null ? `<span class="cat-eta cat-eta-driver">📍 Conductor: ~${cat.eta_minutes} min</span>` : '';
         row.innerHTML = `
           <div class="cat-left">
             <span class="cat-name">${escapeHtml(cat.name)}</span>
@@ -1431,7 +1442,7 @@
           </div>
           <div class="cat-right">
             <span class="cat-price">${priceText}</span>
-            ${cat.eta_minutes != null ? `<span class="cat-eta">~${cat.eta_minutes} min</span>` : ''}
+            <div class="cat-times">${tripMin}${driverMin}</div>
           </div>
         `;
         list.appendChild(row);

@@ -47,8 +47,17 @@ function simulate(serviceSlug, pickup, destination) {
   const straightKm = haversineKm(pickup.lat, pickup.lng, destination.lat, destination.lng);
   // Road distance in Colombian cities is ~1.25–1.45x the straight-line distance
   const roadKm = straightKm * randomBetween(1.25, 1.45);
-  // Average urban speed in Colombian cities: 20–30 km/h (traffic)
-  const avgSpeedKmh = randomBetween(20, 30);
+  // Speed depends on trip length: short urban, medium mixed, long highway
+  let avgSpeedKmh;
+  if (roadKm < 5) {
+    avgSpeedKmh = randomBetween(15, 22);   // tráfico denso, distancias cortas
+  } else if (roadKm < 15) {
+    avgSpeedKmh = randomBetween(20, 30);   // urbano típico
+  } else if (roadKm < 30) {
+    avgSpeedKmh = randomBetween(25, 40);   // mixto urbano/vía rápida (ej. aeropuerto)
+  } else {
+    avgSpeedKmh = randomBetween(35, 55);   // vías rápidas o autopistas
+  }
   const durationMin = (roadKm / avgSpeedKmh) * 60;
 
   // Surge: 30% chance, multiplier 1.1–1.9
