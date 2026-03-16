@@ -1052,7 +1052,7 @@
     // ─── Supabase Auth ────────────────────────────────────────
     const SUPABASE_URL  = 'https://yguxreenjnywuycheggk.supabase.co';
     const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlndXhyZWVuam55d3V5Y2hlZ2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2MTE4NDIsImV4cCI6MjA4OTE4Nzg0Mn0.Omm4Y88Qqk0RC2KbJG5YwGEw3L17npyp38qGXPjgSiA';
-    const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const sbClient      = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const authOverlay   = document.getElementById('auth-overlay');
     const authError     = document.getElementById('auth-error');
@@ -1087,8 +1087,8 @@
       authError.classList.remove('visible');
 
       const { error } = authMode === 'login'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        ? await sbClient.auth.signInWithPassword({ email, password })
+        : await sbClient.auth.signUp({ email, password });
 
       authSubmit.disabled = false;
       switchTab(authMode);
@@ -1104,7 +1104,7 @@
     }
 
     async function handleLogout() {
-      await supabase.auth.signOut();
+      await sbClient.auth.signOut();
     }
 
     function onSession(session) {
@@ -1119,8 +1119,13 @@
     }
 
     // Check session on load + listen for changes
-    supabase.auth.getSession().then(({ data }) => onSession(data.session));
-    supabase.auth.onAuthStateChange((_event, session) => onSession(session));
+    sbClient.auth.getSession().then(({ data }) => onSession(data.session));
+    sbClient.auth.onAuthStateChange((_event, session) => onSession(session));
+
+    // Expose to global scope for onclick attributes
+    window.switchTab  = switchTab;
+    window.handleAuth = handleAuth;
+    window.handleLogout = handleLogout;
 
     // Submit on Enter key
     authPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuth(); });
