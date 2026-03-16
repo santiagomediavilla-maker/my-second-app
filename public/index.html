@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -626,6 +627,71 @@
       background-color: #fff;
     }
 
+    /* ── Map ─────────────────────────────────────────────────── */
+    #map-section {
+      display: none;
+      margin-top: 1.25rem;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      position: relative;
+      border: 1px solid var(--gray-200);
+    }
+
+    #map-section.visible { display: block; }
+
+    #map { height: 260px; width: 100%; }
+
+    .map-route-badge {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10,10,10,.75);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 99px;
+      white-space: nowrap;
+      z-index: 1000;
+      pointer-events: none;
+      letter-spacing: 0.02em;
+    }
+
+    /* Custom Leaflet marker styles */
+    .map-pin-origin {
+      width: 14px; height: 14px;
+      background: var(--orange);
+      border: 2.5px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(255,90,31,.5);
+    }
+
+    .map-pin-dest {
+      width: 14px; height: 14px;
+      background: var(--gray-900);
+      border: 2.5px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    }
+
+    .map-pin-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: #fff;
+      color: var(--gray-700);
+      border: 1px solid var(--gray-200);
+      border-radius: 4px;
+      padding: 2px 5px;
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,.15);
+      margin-top: 4px;
+    }
+
     /* ── Footer ─────────────────────────────────────────────── */
     footer {
       text-align: center;
@@ -721,6 +787,12 @@
       <p class="btn-hint" id="btn-hint">Selecciona las direcciones del desplegable</p>
     </div>
 
+    <!-- Map -->
+    <div id="map-section" aria-hidden="true">
+      <div id="map"></div>
+      <div class="map-route-badge" id="map-badge"></div>
+    </div>
+
     <!-- Loading -->
     <div id="loading" role="status" aria-live="polite">
       <div class="spinner"></div>
@@ -749,6 +821,7 @@
     Precios estimados, pueden variar.
   </footer>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     'use strict';
 
@@ -832,6 +905,7 @@
       showResults(false);
       hideError();
       updateButtonState();
+      updateMap();
     });
 
     // ─── Autocomplete ─────────────────────────────────────────
@@ -904,6 +978,7 @@
             state[stateKey] = { lat: place.lat, lng: place.lng, name: place.name };
             input.classList.add('has-coords');
             updateButtonState();
+            updateMap();
           });
         } catch (err) {
           closeDropdown(dropdown);
@@ -1058,6 +1133,93 @@
 
       card.appendChild(list);
       return card;
+    }
+
+    // ─── Map ──────────────────────────────────────────────────
+    const mapSection  = document.getElementById('map-section');
+    const mapBadge    = document.getElementById('map-badge');
+
+    let leafletMap    = null;
+    let originMarker  = null;
+    let destMarker    = null;
+    let routeLayer    = null;
+
+    function initMap() {
+      if (leafletMap) return;
+      leafletMap = L.map('map', { zoomControl: true, attributionControl: false });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(leafletMap);
+    }
+
+    function makeIcon(className, label) {
+      return L.divIcon({
+        className: '',
+        html: `<div class="${className}"></div><div class="map-pin-label">${label}</div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+        popupAnchor: [0, -12],
+      });
+    }
+
+    async function fetchRoute(origin, dest) {
+      const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('route fetch failed');
+      const data = await res.json();
+      return data.routes[0].geometry.coordinates; // [[lng,lat], ...]
+    }
+
+    async function updateMap() {
+      if (!state.pickup || !state.destination) {
+        mapSection.classList.remove('visible');
+        return;
+      }
+
+      mapSection.classList.add('visible');
+      initMap();
+      leafletMap.invalidateSize();
+
+      const origin = state.pickup;
+      const dest   = state.destination;
+
+      // Place / update markers
+      if (originMarker) leafletMap.removeLayer(originMarker);
+      if (destMarker)   leafletMap.removeLayer(destMarker);
+
+      originMarker = L.marker([origin.lat, origin.lng], { icon: makeIcon('map-pin-origin', 'Origen') }).addTo(leafletMap);
+      destMarker   = L.marker([dest.lat,   dest.lng],   { icon: makeIcon('map-pin-dest',   'Destino') }).addTo(leafletMap);
+
+      const bounds = L.latLngBounds([[origin.lat, origin.lng], [dest.lat, dest.lng]]);
+      leafletMap.fitBounds(bounds, { padding: [40, 40] });
+
+      // Update badge
+      const oShort = shortenName(origin.name);
+      const dShort = shortenName(dest.name);
+      mapBadge.textContent = `${oShort} → ${dShort}`;
+
+      // Draw route
+      if (routeLayer) { leafletMap.removeLayer(routeLayer); routeLayer = null; }
+      try {
+        const coords = await fetchRoute(origin, dest);
+        const latlngs = coords.map(([lng, lat]) => [lat, lng]);
+        routeLayer = L.polyline(latlngs, {
+          color: '#FF5A1F',
+          weight: 4,
+          opacity: 0.85,
+          lineJoin: 'round',
+          lineCap: 'round',
+        }).addTo(leafletMap);
+        leafletMap.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+      } catch (_) {
+        // fallback: straight line
+        routeLayer = L.polyline([[origin.lat, origin.lng], [dest.lat, dest.lng]], {
+          color: '#FF5A1F',
+          weight: 3,
+          opacity: 0.7,
+          dashArray: '6 6',
+        }).addTo(leafletMap);
+      }
     }
 
     // ─── Init ─────────────────────────────────────────────────
