@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -63,6 +64,199 @@
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ── Auth overlay ───────────────────────────────────────── */
+    #auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--ink);
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(255,90,31,.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,90,31,.08) 0%, transparent 40%);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    #auth-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+
+    #auth-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 380px;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-header {
+      background: var(--ink);
+      padding: 2rem 2rem 1.5rem;
+      text-align: center;
+    }
+
+    .auth-logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+    }
+
+    .auth-logo em { font-style: normal; color: var(--orange); }
+
+    .auth-subtitle {
+      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,.45);
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--gray-400);
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+      margin-bottom: -1px;
+    }
+
+    .auth-tab.active {
+      color: var(--orange);
+      border-bottom-color: var(--orange);
+    }
+
+    .auth-body { padding: 1.5rem 1.75rem 1.75rem; }
+
+    .auth-field { margin-bottom: 1rem; }
+
+    .auth-field label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 0.4rem;
+    }
+
+    .auth-field input {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .auth-field input:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(255,90,31,.12);
+      background: #fff;
+    }
+
+    #auth-error {
+      display: none;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: var(--radius-xs);
+      padding: 0.6rem 0.75rem;
+      font-size: 0.8rem;
+      color: var(--red);
+      margin-bottom: 1rem;
+    }
+
+    #auth-error.visible { display: block; }
+
+    #auth-submit {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.92rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .15s, transform .1s, box-shadow .15s;
+    }
+
+    #auth-submit:hover:not(:disabled) {
+      background: var(--orange-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(255,90,31,.35);
+    }
+
+    #auth-submit:disabled {
+      background: var(--gray-200);
+      color: var(--gray-400);
+      cursor: not-allowed;
+    }
+
+    /* ── User pill in hero ──────────────────────────────────── */
+    .hero-user {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 99px;
+      padding: 0.3rem 0.5rem 0.3rem 0.75rem;
+      z-index: 2;
+    }
+
+    .hero-user-email {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,.65);
+      font-weight: 500;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-logout {
+      background: rgba(255,255,255,.1);
+      border: none;
+      border-radius: 99px;
+      color: rgba(255,255,255,.7);
+      font-size: 0.68rem;
+      font-weight: 600;
+      font-family: inherit;
+      padding: 0.2rem 0.55rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .btn-logout:hover { background: rgba(255,255,255,.18); color: #fff; }
 
     /* ── Hero ───────────────────────────────────────────────── */
     .hero {
@@ -706,7 +900,37 @@
 </head>
 <body>
 
+  <!-- Auth overlay -->
+  <div id="auth-overlay">
+    <div id="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">Ride<em>Compare</em></div>
+        <p class="auth-subtitle">Colombia · Compara precios en segundos</p>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Iniciar sesión</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Registrarse</button>
+      </div>
+      <div class="auth-body">
+        <div id="auth-error"></div>
+        <div class="auth-field">
+          <label for="auth-email">Correo electrónico</label>
+          <input type="email" id="auth-email" placeholder="tu@correo.com" autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label for="auth-password">Contraseña</label>
+          <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button id="auth-submit" onclick="handleAuth()">Iniciar sesión</button>
+      </div>
+    </div>
+  </div>
+
   <div class="hero">
+    <div class="hero-user" id="hero-user" style="display:none">
+      <span class="hero-user-email" id="user-email-display"></span>
+      <button class="btn-logout" onclick="handleLogout()">Salir</button>
+    </div>
     <div class="hero-inner">
       <div class="hero-eyebrow">
         <span class="dot"></span>
@@ -824,6 +1048,83 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     'use strict';
+
+    // ─── Supabase Auth ────────────────────────────────────────
+    const SUPABASE_URL  = 'https://yguxreenjnywuycheggk.supabase.co';
+    const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlndXhyZWVuam55d3V5Y2hlZ2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2MTE4NDIsImV4cCI6MjA4OTE4Nzg0Mn0.Omm4Y88Qqk0RC2KbJG5YwGEw3L17npyp38qGXPjgSiA';
+    const supabase      = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const authOverlay   = document.getElementById('auth-overlay');
+    const authError     = document.getElementById('auth-error');
+    const authSubmit    = document.getElementById('auth-submit');
+    const authEmail     = document.getElementById('auth-email');
+    const authPassword  = document.getElementById('auth-password');
+    const heroUser      = document.getElementById('hero-user');
+    const userEmailDisp = document.getElementById('user-email-display');
+
+    let authMode = 'login';
+
+    function switchTab(mode) {
+      authMode = mode;
+      document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+      document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+      authSubmit.textContent = mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+      authError.classList.remove('visible');
+    }
+
+    function setAuthError(msg) {
+      authError.textContent = msg;
+      authError.classList.add('visible');
+    }
+
+    async function handleAuth() {
+      const email    = authEmail.value.trim();
+      const password = authPassword.value;
+      if (!email || !password) { setAuthError('Completa todos los campos.'); return; }
+
+      authSubmit.disabled = true;
+      authSubmit.textContent = 'Cargando...';
+      authError.classList.remove('visible');
+
+      const { error } = authMode === 'login'
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({ email, password });
+
+      authSubmit.disabled = false;
+      switchTab(authMode);
+
+      if (error) {
+        const msgs = {
+          'Invalid login credentials': 'Correo o contraseña incorrectos.',
+          'User already registered':   'Este correo ya está registrado.',
+          'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
+        };
+        setAuthError(msgs[error.message] || error.message);
+      }
+    }
+
+    async function handleLogout() {
+      await supabase.auth.signOut();
+    }
+
+    function onSession(session) {
+      if (session) {
+        authOverlay.style.display = 'none';
+        heroUser.style.display    = 'flex';
+        userEmailDisp.textContent = session.user.email;
+      } else {
+        authOverlay.style.display = 'flex';
+        heroUser.style.display    = 'none';
+      }
+    }
+
+    // Check session on load + listen for changes
+    supabase.auth.getSession().then(({ data }) => onSession(data.session));
+    supabase.auth.onAuthStateChange((_event, session) => onSession(session));
+
+    // Submit on Enter key
+    authPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuth(); });
+    authEmail.addEventListener('keydown', (e) => { if (e.key === 'Enter') authPassword.focus(); });
 
     // ─── State ────────────────────────────────────────────────
     const state = {
